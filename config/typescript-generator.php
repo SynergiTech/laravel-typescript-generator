@@ -33,7 +33,39 @@ return [
     | base_path(). Each model gets its own file.
     |
     */
-    'output_directory' => 'resources/js/types',
+    'output_directory' => 'resources/js/types/models',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Enum Namespace
+    |--------------------------------------------------------------------------
+    |
+    | The namespace where your PHP backed enums live.
+    |
+    */
+    'enum_namespace' => 'App\\Enum',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Enum Directory
+    |--------------------------------------------------------------------------
+    |
+    | The directory path (relative to base_path()) that corresponds to the
+    | enum namespace above.
+    |
+    */
+    'enum_directory' => 'app/Enum',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Enum Output Directory
+    |--------------------------------------------------------------------------
+    |
+    | Where the generated enum .ts files will be written to, relative to
+    | base_path(). Each enum gets its own file.
+    |
+    */
+    'enum_output_directory' => 'resources/js/types/enums',
 
     /*
     |--------------------------------------------------------------------------

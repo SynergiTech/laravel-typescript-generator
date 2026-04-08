@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use ReflectionClass;
+use ReflectionEnum;
 use ReflectionMethod;
 use ReflectionNamedType;
 use Throwable;
@@ -21,6 +21,9 @@ class TypeScriptGenerator
     /** @var array<string, string> Model FQCN → TypeScript interface name */
     protected array $modelMap = [];
 
+    /** @var array<string, string> Enum FQCN → TypeScript enum name */
+    protected array $enumMap = [];
+
     public function __construct(array $config)
     {
         $this->config = $config;
@@ -32,16 +35,30 @@ class TypeScriptGenerator
     // -----------------------------------------------------------------------
 
     /**
-     * Run the full generation pipeline.
+     * Run the full generation pipeline: enums first, then models.
      *
-     * @return array{generated: string[], skipped: string[], errors: array<string, string>}
+     * @return array{
+     *   generated: string[],
+     *   skipped: string[],
+     *   errors: array<string, string>,
+     *   enums_generated: string[],
+     *   enum_errors: array<string, string>
+     * }
      */
     public function generate(bool $withRelationships = false): array
     {
-        $models = $this->discoverModels();
-        $results = ['generated' => [], 'skipped' => [], 'errors' => []];
+        // Generate enums first so the enum map is available during model generation
+        $enumResults = $this->generateEnums();
 
-        // First pass — build a map so relationships can reference sibling types
+        $models = $this->discoverModels();
+        $results = [
+            'generated' => [],
+            'skipped' => [],
+            'errors' => [],
+            'enums_generated' => $enumResults['generated'],
+            'enum_errors' => $enumResults['errors'],
+        ];
+
         foreach ($models as $modelClass) {
             $this->modelMap[$modelClass] = class_basename($modelClass);
         }
@@ -65,8 +82,7 @@ class TypeScriptGenerator
             }
         }
 
-        // Generate barrel index file that re-exports everything
-        $this->generateIndex($outputDir, $results['generated']);
+        $this->generateModelIndex($outputDir, $results['generated']);
 
         return $results;
     }
@@ -96,13 +112,8 @@ class TypeScriptGenerator
                 continue;
             }
 
-            // Build the FQCN from the relative path
-            $relativePath = $file->getRelativePathname();                // e.g. "User.php" or "Sub/Thing.php"
-            $className = $namespace . '\\' . str_replace(
-                ['/', '.php'],
-                ['\\', ''],
-                $relativePath
-            );
+            $relativePath = $file->getRelativePathname();
+            $className = $namespace . '\\' . str_replace(['/', '.php'], ['\\', ''], $relativePath);
 
             if (! class_exists($className)) {
                 continue;
@@ -128,6 +139,116 @@ class TypeScriptGenerator
     }
 
     // -----------------------------------------------------------------------
+    //  Enum Discovery & Generation
+    // -----------------------------------------------------------------------
+
+    /**
+     * Scan the configured enum directory and return all backed enum FQCNs.
+     *
+     * @return string[]
+     */
+    public function discoverEnums(): array
+    {
+        $directory = base_path($this->config['enum_directory'] ?? 'app/Enum');
+
+        if (! $this->files->isDirectory($directory)) {
+            return [];
+        }
+
+        $namespace = $this->config['enum_namespace'] ?? 'App\\Enum';
+        $enums = [];
+
+        foreach ($this->files->allFiles($directory) as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $relativePath = $file->getRelativePathname();
+            $className = $namespace . '\\' . str_replace(['/', '.php'], ['\\', ''], $relativePath);
+
+            if (! enum_exists($className)) {
+                continue;
+            }
+
+            $reflection = new ReflectionEnum($className);
+
+            if (! $reflection->isBacked()) {
+                continue;
+            }
+
+            $enums[] = $className;
+        }
+
+        sort($enums);
+
+        return $enums;
+    }
+
+    /**
+     * Generate TypeScript enum files and populate $this->enumMap.
+     *
+     * @return array{generated: string[], errors: array<string, string>}
+     */
+    public function generateEnums(): array
+    {
+        $enums = $this->discoverEnums();
+        $results = ['generated' => [], 'errors' => []];
+
+        if (empty($enums)) {
+            return $results;
+        }
+
+        $outputDir = base_path($this->config['enum_output_directory'] ?? 'resources/js/types/enums');
+        $this->ensureDirectory($outputDir);
+
+        foreach ($enums as $enumClass) {
+            try {
+                $definition = $this->generateForEnum($enumClass);
+                $filename = class_basename($enumClass) . '.ts';
+                $this->files->put($outputDir . '/' . $filename, $definition);
+                $this->enumMap[$enumClass] = class_basename($enumClass);
+                $results['generated'][] = $enumClass;
+            } catch (Throwable $e) {
+                $results['errors'][$enumClass] = $e->getMessage();
+            }
+        }
+
+        if (! empty($results['generated'])) {
+            $this->generateEnumIndex($outputDir, $results['generated']);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Generate the TypeScript enum content for a single backed enum.
+     */
+    public function generateForEnum(string $enumClass): string
+    {
+        $reflection = new ReflectionEnum($enumClass);
+        $enumName = class_basename($enumClass);
+        $backingType = $reflection->getBackingType()?->getName() ?? 'string';
+
+        $lines = [];
+        $lines[] = '// Auto-generated by laravel-typescript-generator';
+        $lines[] = '// Enum: ' . $enumClass;
+        $lines[] = '// Generated at: ' . now()->toIso8601String();
+        $lines[] = '';
+        $lines[] = "export enum {$enumName} {";
+
+        foreach ($reflection->getCases() as $case) {
+            $value = $case->getBackingValue();
+            $valueStr = $backingType === 'string' ? "'{$value}'" : (string) $value;
+            $lines[] = "  {$case->getName()} = {$valueStr},";
+        }
+
+        $lines[] = '}';
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    // -----------------------------------------------------------------------
     //  Per-Model Generation
     // -----------------------------------------------------------------------
 
@@ -148,32 +269,47 @@ class TypeScriptGenerator
         $lines[] = '// Generated at: ' . now()->toIso8601String();
         $lines[] = '';
 
-        // Collect imports for relationship types
-        $imports = [];
-
-        if ($withRelationships) {
-            $relationships = $this->resolveRelationships($instance);
-            foreach ($relationships as $rel) {
-                $relatedType = $rel['typescript_type'];
-                // Extract the base type name (strip "[] | null" etc.)
-                $baseType = preg_replace('/[\[\]\s|null]+/', '', $relatedType);
-                if ($baseType !== 'unknown' && $baseType !== $interfaceName && ! in_array($baseType, $imports, true)) {
-                    $imports[] = $baseType;
+        // Collect enum imports from casted properties
+        $enumImports = [];
+        foreach ($properties as $prop) {
+            if (isset($prop['enum_class']) && $prop['enum_class'] !== null) {
+                $enumName = $this->enumMap[$prop['enum_class']] ?? null;
+                if ($enumName !== null && ! in_array($enumName, $enumImports, true)) {
+                    $enumImports[] = $enumName;
                 }
             }
         }
 
-        // Add import references
-        foreach ($imports as $import) {
+        // Collect model imports for relationship types
+        $modelImports = [];
+        if ($withRelationships) {
+            $relationships = $this->resolveRelationships($instance);
+            foreach ($relationships as $rel) {
+                $relatedType = $rel['typescript_type'];
+                preg_match('/^([A-Za-z_][A-Za-z0-9_]*)/', $relatedType, $matches);
+                $baseType = $matches[1] ?? '';
+                if ($baseType !== '' && $baseType !== 'unknown' && $baseType !== $interfaceName && ! in_array($baseType, $modelImports, true)) {
+                    $modelImports[] = $baseType;
+                }
+            }
+        }
+
+        // Write enum imports (from ../enums/)
+        foreach ($enumImports as $enumName) {
+            $lines[] = "import type { {$enumName} } from '../enums/{$enumName}';";
+        }
+
+        // Write model imports (from sibling files)
+        foreach ($modelImports as $import) {
             $lines[] = "import type { {$import} } from './{$import}';";
         }
-        if (count($imports) > 0) {
+
+        if (count($enumImports) > 0 || count($modelImports) > 0) {
             $lines[] = '';
         }
 
         $lines[] = "export interface {$interfaceName} {";
 
-        // --- Attribute properties ---
         foreach ($properties as $prop) {
             $nullable = $prop['nullable'];
             $tsType = $prop['typescript_type'];
@@ -192,7 +328,6 @@ class TypeScriptGenerator
             }
         }
 
-        // --- Relationship properties ---
         if ($withRelationships) {
             $relationships = $this->resolveRelationships($instance);
             if (count($relationships) > 0) {
@@ -218,7 +353,7 @@ class TypeScriptGenerator
      * Merge database schema columns with model casts to produce the final
      * list of typed properties.
      *
-     * @return array<int, array{name: string, typescript_type: string, nullable: bool, comment: string}>
+     * @return array<int, array{name: string, typescript_type: string, nullable: bool, comment: string, enum_class: string|null}>
      */
     protected function resolveProperties(Model $instance, string $modelClass): array
     {
@@ -234,7 +369,6 @@ class TypeScriptGenerator
         foreach ($columns as $column) {
             $name = $column['name'];
 
-            // Skip timestamps if the model has them disabled and config says respect that
             if (
                 ! ($this->config['include_timestamps'] ?? false) &&
                 ! $instance->usesTimestamps() &&
@@ -243,16 +377,19 @@ class TypeScriptGenerator
                 continue;
             }
 
-            // 1) Check manual overrides first
+            $enumClass = null;
+
             if (isset($overrides[$name])) {
                 $tsType = $overrides[$name];
-            }
-            // 2) Then check Laravel casts
-            elseif (isset($casts[$name])) {
-                $tsType = TypeMapper::fromLaravelCast($casts[$name]);
-            }
-            // 3) Fall back to database column type
-            else {
+            } elseif (isset($casts[$name])) {
+                $castValue = $casts[$name];
+                if (isset($this->enumMap[$castValue])) {
+                    $tsType = $this->enumMap[$castValue];
+                    $enumClass = $castValue;
+                } else {
+                    $tsType = TypeMapper::fromLaravelCast($castValue);
+                }
+            } else {
                 $tsType = TypeMapper::fromDatabaseType($column['type']);
             }
 
@@ -261,6 +398,7 @@ class TypeScriptGenerator
                 'typescript_type' => $tsType,
                 'nullable' => $column['nullable'],
                 'comment' => $this->buildComment($column, $casts[$name] ?? null),
+                'enum_class' => $enumClass,
             ];
         }
 
@@ -276,7 +414,6 @@ class TypeScriptGenerator
     {
         $schemaBuilder = Schema::connection($connection);
 
-        // Laravel 11+ has getColumns() which returns rich metadata
         if (method_exists($schemaBuilder, 'getColumns')) {
             return collect($schemaBuilder->getColumns($table))
                 ->map(fn (array $col) => [
@@ -287,14 +424,13 @@ class TypeScriptGenerator
                 ->all();
         }
 
-        // Fallback for Laravel 10 — use getColumnListing + getColumnType
         $columnNames = $schemaBuilder->getColumnListing($table);
 
         return collect($columnNames)
             ->map(fn (string $name) => [
                 'name' => $name,
                 'type' => $schemaBuilder->getColumnType($table, $name),
-                'nullable' => true, // Can't easily determine on L10, default to nullable
+                'nullable' => true,
             ])
             ->all();
     }
@@ -333,17 +469,14 @@ class TypeScriptGenerator
         $relationships = [];
 
         foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
-            // Skip non-model methods
             if ($method->class !== get_class($instance)) {
                 continue;
             }
 
-            // Must have zero required parameters
             if ($method->getNumberOfRequiredParameters() > 0) {
                 continue;
             }
 
-            // Check if the return type is a known relationship class
             $returnType = $method->getReturnType();
 
             if (! $returnType instanceof ReflectionNamedType) {
@@ -356,7 +489,6 @@ class TypeScriptGenerator
                 continue;
             }
 
-            // Try calling the method to get the related model
             try {
                 /** @var Relation $relation */
                 $relation = $instance->{$method->getName()}();
@@ -371,7 +503,6 @@ class TypeScriptGenerator
                     'typescript_type' => TypeMapper::fromRelationship($relationType, $relatedTsType),
                 ];
             } catch (Throwable) {
-                // If we can't resolve it, skip gracefully
                 continue;
             }
         }
@@ -380,15 +511,15 @@ class TypeScriptGenerator
     }
 
     // -----------------------------------------------------------------------
-    //  Index / Barrel File
+    //  Index / Barrel Files
     // -----------------------------------------------------------------------
 
     /**
-     * Generate an index.d.ts that re-exports all generated interfaces.
+     * Generate an index.d.ts that re-exports all generated model interfaces.
      *
      * @param  string[]  $generatedModels  FQCNs of successfully generated models
      */
-    protected function generateIndex(string $outputDir, array $generatedModels): void
+    protected function generateModelIndex(string $outputDir, array $generatedModels): void
     {
         $lines = ['// Auto-generated barrel file — do not edit manually', ''];
 
@@ -400,6 +531,25 @@ class TypeScriptGenerator
         $lines[] = '';
 
         $this->files->put($outputDir . '/index.d.ts', implode("\n", $lines));
+    }
+
+    /**
+     * Generate an index.ts that re-exports all generated enums.
+     *
+     * @param  string[]  $generatedEnums  FQCNs of successfully generated enums
+     */
+    protected function generateEnumIndex(string $outputDir, array $generatedEnums): void
+    {
+        $lines = ['// Auto-generated barrel file — do not edit manually', ''];
+
+        foreach ($generatedEnums as $enumClass) {
+            $name = class_basename($enumClass);
+            $lines[] = "export { {$name} } from './{$name}';";
+        }
+
+        $lines[] = '';
+
+        $this->files->put($outputDir . '/index.ts', implode("\n", $lines));
     }
 
     // -----------------------------------------------------------------------

@@ -13,17 +13,31 @@ class GenerateTypeScriptCommand extends Command
                             {--model=* : Generate types only for specific models (short class name, e.g. User)}
                             {--dry-run : Preview what would be generated without writing files}';
 
-    protected $description = 'Generate TypeScript type definitions from Eloquent models';
+    protected $description = 'Generate TypeScript type definitions from Eloquent models and enums';
 
     public function handle(TypeScriptGenerator $generator): int
     {
-        $this->components->info('Scanning for Eloquent models…');
-
         $withRelationships = $this->resolveRelationshipsFlag();
-        $filterModels = $this->option('model');
         $dryRun = (bool) $this->option('dry-run');
 
-        // Discover all models first (so the user can see what was found)
+        // --- Enums ---
+        $this->components->info('Scanning for backed enums…');
+
+        $discoveredEnums = $generator->discoverEnums();
+
+        if (! empty($discoveredEnums)) {
+            $this->components->bulletList(
+                array_map(fn (string $e) => class_basename($e) . " <fg=gray>({$e})</>", $discoveredEnums)
+            );
+            $this->newLine();
+        } else {
+            $this->components->warn('No backed enums found in the configured namespace.');
+            $this->newLine();
+        }
+
+        // --- Models ---
+        $this->components->info('Scanning for Eloquent models…');
+
         $discovered = $generator->discoverModels();
 
         if (empty($discovered)) {
@@ -39,14 +53,35 @@ class GenerateTypeScriptCommand extends Command
         $this->newLine();
 
         if ($dryRun) {
-            $this->components->info('[dry-run] Would generate ' . count($discovered) . ' type definition(s). No files written.');
+            $this->components->info(
+                '[dry-run] Would generate ' . count($discoveredEnums) . ' enum(s) and ' . count($discovered) . ' model type(s). No files written.'
+            );
 
             return self::SUCCESS;
         }
 
         $results = $generator->generate($withRelationships);
 
-        // Report
+        // Report enums
+        foreach ($results['enums_generated'] as $enumClass) {
+            $this->components->twoColumnDetail(
+                '<fg=green>✓</> ' . class_basename($enumClass),
+                '<fg=gray>' . class_basename($enumClass) . '.ts</>'
+            );
+        }
+
+        foreach ($results['enum_errors'] as $enumClass => $error) {
+            $this->components->twoColumnDetail(
+                '<fg=red>✗</> ' . class_basename($enumClass),
+                "<fg=red>{$error}</>"
+            );
+        }
+
+        if (! empty($results['enums_generated']) || ! empty($results['enum_errors'])) {
+            $this->newLine();
+        }
+
+        // Report models
         foreach ($results['generated'] as $model) {
             $this->components->twoColumnDetail(
                 '<fg=green>✓</> ' . class_basename($model),
@@ -70,18 +105,21 @@ class GenerateTypeScriptCommand extends Command
 
         $this->newLine();
 
-        $outputDir = config('typescript-generator.output_directory', 'resources/js/types');
-        $count = count($results['generated']);
+        $enumOutputDir = config('typescript-generator.enum_output_directory', 'resources/js/types/enums');
+        $modelOutputDir = config('typescript-generator.output_directory', 'resources/js/types/models');
+        $enumCount = count($results['enums_generated']);
+        $modelCount = count($results['generated']);
 
-        $this->components->info(
-            "Generated {$count} type definition(s) → {$outputDir}/"
-        );
+        $this->components->info("Generated {$enumCount} enum(s) → {$enumOutputDir}/");
+        $this->components->info("Generated {$modelCount} model type(s) → {$modelOutputDir}/");
 
         if ($withRelationships) {
             $this->components->info('Relationships: included');
         }
 
-        return count($results['errors']) > 0 ? self::FAILURE : self::SUCCESS;
+        $hasErrors = count($results['errors']) > 0 || count($results['enum_errors']) > 0;
+
+        return $hasErrors ? self::FAILURE : self::SUCCESS;
     }
 
     /**
