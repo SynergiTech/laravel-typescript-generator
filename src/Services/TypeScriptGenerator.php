@@ -278,7 +278,7 @@ class TypeScriptGenerator
 
         // Laravel 11+ has getColumns() which returns rich metadata
         if (method_exists($schemaBuilder, 'getColumns')) {
-            return collect($schemaBuilder->getColumns())
+            return collect($schemaBuilder->getColumns($table))
                 ->map(fn (array $col) => [
                     'name' => $col['name'],
                     'type' => $col['type_name'] ?? $col['type'] ?? 'string',
