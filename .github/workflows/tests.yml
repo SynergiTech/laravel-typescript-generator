@@ -23,6 +23,8 @@ jobs:
             php: '8.1'
           - laravel: 13
             php: '8.1'
+          - laravel: 13
+            php: '8.2'
 
     steps:
       - name: Checkout

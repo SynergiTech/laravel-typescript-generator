@@ -8,7 +8,7 @@ Generate TypeScript type definitions from your Laravel Eloquent models automatic
 
 | Laravel | PHP          | Supported |
 |---------|--------------|-----------|
-| 13.x    | ^8.2         | ✓         |
+| 13.x    | ^8.3         | ✓         |
 | 12.x    | ^8.2         | ✓         |
 | 11.x    | ^8.2         | ✓         |
 | 10.x    | ^8.1         | ✓         |
