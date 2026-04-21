@@ -48,7 +48,7 @@ class ResourceGenerator
             $this->resourceMap[$resourceClass] = class_basename($resourceClass);
         }
 
-        $outputDir = base_path($this->config['resource_output_directory'] ?? 'resources/js/types/resources');
+        $outputDir = $this->resolvePath($this->config['resource_output_directory'] ?? 'resources/js/types/resources');
         $this->ensureDirectory($outputDir);
 
         foreach ($resources as $resourceClass) {
@@ -85,7 +85,7 @@ class ResourceGenerator
      */
     public function discoverResources(): array
     {
-        $directory = base_path($this->config['resource_directory'] ?? 'app/Http/Resources');
+        $directory = $this->resolvePath($this->config['resource_directory'] ?? 'app/Http/Resources');
 
         if (! $this->files->isDirectory($directory)) {
             return [];
@@ -447,5 +447,14 @@ class ResourceGenerator
         if (! $this->files->isDirectory($path)) {
             $this->files->makeDirectory($path, 0755, true);
         }
+    }
+
+    /**
+     * Resolve a config path to an absolute filesystem path.
+     * Absolute paths are returned as-is; relative paths are resolved via base_path().
+     */
+    protected function resolvePath(string $path): string
+    {
+        return str_starts_with($path, '/') ? $path : base_path($path);
     }
 }

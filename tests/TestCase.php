@@ -11,11 +11,6 @@ abstract class TestCase extends BaseTestCase
 {
     protected string $outputBase;
 
-    protected function getApplicationBasePath(): string
-    {
-        return dirname(__DIR__);
-    }
-
     protected function getPackageProviders($app): array
     {
         return [TypeScriptGeneratorServiceProvider::class];
@@ -32,23 +27,25 @@ abstract class TestCase extends BaseTestCase
 
         $this->outputBase = sys_get_temp_dir() . '/ts-gen-tests-' . uniqid();
 
+        // Use absolute paths so the generators don't need base_path() to be
+        // the project root (which would require bootstrap/cache/ to exist here).
         $app['config']->set('typescript-generator', [
-            'model_namespace'          => 'SynergiTech\\TypeScriptGenerator\\Tests\\Fixtures\\Models',
-            'model_directory'          => 'tests/Fixtures/Models',
-            'output_directory'         => $this->outputBase . '/models',
-            'enum_namespace'           => 'SynergiTech\\TypeScriptGenerator\\Tests\\Fixtures\\Enums',
-            'enum_directory'           => 'tests/Fixtures/Enums',
-            'enum_output_directory'    => $this->outputBase . '/enums',
-            'resource_namespace'       => 'SynergiTech\\TypeScriptGenerator\\Tests\\Fixtures\\Resources',
-            'resource_directory'       => 'tests/Fixtures/Resources',
-            'resource_output_directory'=> $this->outputBase . '/resources',
-            'include_relationships'    => false,
-            'include_timestamps'       => true,
-            'include_resources'        => false,
-            'nullable_style'           => 'union',
-            'excluded_models'          => [],
-            'excluded_resources'       => [],
-            'type_overrides'           => [],
+            'model_namespace'           => 'SynergiTech\\TypeScriptGenerator\\Tests\\Fixtures\\Models',
+            'model_directory'           => __DIR__ . '/Fixtures/Models',
+            'output_directory'          => $this->outputBase . '/models',
+            'enum_namespace'            => 'SynergiTech\\TypeScriptGenerator\\Tests\\Fixtures\\Enums',
+            'enum_directory'            => __DIR__ . '/Fixtures/Enums',
+            'enum_output_directory'     => $this->outputBase . '/enums',
+            'resource_namespace'        => 'SynergiTech\\TypeScriptGenerator\\Tests\\Fixtures\\Resources',
+            'resource_directory'        => __DIR__ . '/Fixtures/Resources',
+            'resource_output_directory' => $this->outputBase . '/resources',
+            'include_relationships'     => false,
+            'include_timestamps'        => true,
+            'include_resources'         => false,
+            'nullable_style'            => 'union',
+            'excluded_models'           => [],
+            'excluded_resources'        => [],
+            'type_overrides'            => [],
         ]);
     }
 

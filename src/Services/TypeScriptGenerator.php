@@ -63,7 +63,7 @@ class TypeScriptGenerator
             $this->modelMap[$modelClass] = class_basename($modelClass);
         }
 
-        $outputDir = base_path($this->config['output_directory']);
+        $outputDir = $this->resolvePath($this->config['output_directory']);
         $this->ensureDirectory($outputDir);
 
         foreach ($models as $modelClass) {
@@ -98,7 +98,7 @@ class TypeScriptGenerator
      */
     public function discoverModels(): array
     {
-        $directory = base_path($this->config['model_directory']);
+        $directory = $this->resolvePath($this->config['model_directory']);
 
         if (! $this->files->isDirectory($directory)) {
             return [];
@@ -149,7 +149,7 @@ class TypeScriptGenerator
      */
     public function discoverEnums(): array
     {
-        $directory = base_path($this->config['enum_directory'] ?? 'app/Enum');
+        $directory = $this->resolvePath($this->config['enum_directory'] ?? 'app/Enum');
 
         if (! $this->files->isDirectory($directory)) {
             return [];
@@ -198,7 +198,7 @@ class TypeScriptGenerator
             return $results;
         }
 
-        $outputDir = base_path($this->config['enum_output_directory'] ?? 'resources/js/types/enums');
+        $outputDir = $this->resolvePath($this->config['enum_output_directory'] ?? 'resources/js/types/enums');
         $this->ensureDirectory($outputDir);
 
         foreach ($enums as $enumClass) {
@@ -561,5 +561,14 @@ class TypeScriptGenerator
         if (! $this->files->isDirectory($path)) {
             $this->files->makeDirectory($path, 0755, true);
         }
+    }
+
+    /**
+     * Resolve a config path to an absolute filesystem path.
+     * Absolute paths are returned as-is; relative paths are resolved via base_path().
+     */
+    protected function resolvePath(string $path): string
+    {
+        return str_starts_with($path, '/') ? $path : base_path($path);
     }
 }
