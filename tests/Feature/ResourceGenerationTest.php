@@ -2,6 +2,7 @@
 
 namespace SynergiTech\TypeScriptGenerator\Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use SynergiTech\TypeScriptGenerator\Services\ResourceGenerator;
 use SynergiTech\TypeScriptGenerator\Tests\Fixtures\Resources\PostResource;
 use SynergiTech\TypeScriptGenerator\Tests\Fixtures\Resources\UserResource;
@@ -21,7 +22,7 @@ class ResourceGenerationTest extends TestCase
     //  Discovery
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_discovers_json_resource_subclasses(): void
     {
         $resources = $this->generator->discoverResources();
@@ -30,7 +31,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertContains(PostResource::class, $resources);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_resources_sorted_alphabetically(): void
     {
         $resources = $this->generator->discoverResources();
@@ -41,7 +42,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertSame($sorted, $resources);
     }
 
-    /** @test */
+    #[Test]
     public function it_skips_excluded_resources(): void
     {
         config(['typescript-generator.excluded_resources' => [UserResource::class]]);
@@ -57,7 +58,7 @@ class ResourceGenerationTest extends TestCase
     //  Content — UserResource
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_generates_an_interface_for_a_resource(): void
     {
         $output = $this->generator->generateForResource(UserResource::class);
@@ -65,7 +66,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertStringContainsString('export interface UserResource {', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_scalar_fields(): void
     {
         $output = $this->generator->generateForResource(UserResource::class);
@@ -74,16 +75,15 @@ class ResourceGenerationTest extends TestCase
         $this->assertStringContainsString('email:', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_marks_conditional_fields_as_optional(): void
     {
         $output = $this->generator->generateForResource(UserResource::class);
 
-        // 'secret' uses $this->when(false, ...) so it must be optional
         $this->assertStringContainsString('secret?:', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_mark_always_present_fields_as_optional(): void
     {
         $output = $this->generator->generateForResource(UserResource::class);
@@ -96,10 +96,10 @@ class ResourceGenerationTest extends TestCase
     //  Content — PostResource (nested resource)
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_adds_an_import_for_nested_resources(): void
     {
-        // Generate UserResource first so the resourceMap is populated
+        // Generate all resources first so the resourceMap is populated
         $this->generator->generate();
 
         $output = $this->generator->generateForResource(PostResource::class);
@@ -107,7 +107,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertStringContainsString("import type { UserResource } from './UserResource';", $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_types_nested_resources_by_interface_name(): void
     {
         $this->generator->generate();
@@ -121,7 +121,7 @@ class ResourceGenerationTest extends TestCase
     //  Full pipeline — files written
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_writes_d_ts_files_to_the_output_directory(): void
     {
         $this->generator->generate();
@@ -133,7 +133,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertFileExists($outputDir . '/index.d.ts');
     }
 
-    /** @test */
+    #[Test]
     public function it_writes_a_barrel_index_that_re_exports_all_resources(): void
     {
         $this->generator->generate();
@@ -144,7 +144,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertStringContainsString("export type { PostResource } from './PostResource';", $index);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_generated_resource_fqcns_in_results(): void
     {
         $results = $this->generator->generate();
@@ -154,7 +154,7 @@ class ResourceGenerationTest extends TestCase
         $this->assertEmpty($results['errors']);
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_resource_fqcn_in_header_comment(): void
     {
         $output = $this->generator->generateForResource(UserResource::class);

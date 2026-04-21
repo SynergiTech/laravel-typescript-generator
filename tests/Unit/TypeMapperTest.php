@@ -2,6 +2,7 @@
 
 namespace SynergiTech\TypeScriptGenerator\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SynergiTech\TypeScriptGenerator\Mappers\TypeMapper;
 
@@ -11,7 +12,7 @@ class TypeMapperTest extends TestCase
     //  fromDatabaseType
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_maps_integer_types_to_number(): void
     {
         foreach (['int', 'integer', 'tinyint', 'smallint', 'mediumint', 'bigint', 'int2', 'int4', 'int8'] as $type) {
@@ -19,7 +20,7 @@ class TypeMapperTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_serial_types_to_number(): void
     {
         foreach (['serial', 'bigserial', 'smallserial'] as $type) {
@@ -27,7 +28,7 @@ class TypeMapperTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_float_types_to_number(): void
     {
         foreach (['float', 'double', 'real', 'decimal', 'numeric', 'money'] as $type) {
@@ -35,14 +36,14 @@ class TypeMapperTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_boolean_to_boolean(): void
     {
         $this->assertSame('boolean', TypeMapper::fromDatabaseType('boolean'));
         $this->assertSame('boolean', TypeMapper::fromDatabaseType('bool'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_string_types_to_string(): void
     {
         foreach (['char', 'varchar', 'text', 'tinytext', 'mediumtext', 'longtext', 'uuid', 'ulid'] as $type) {
@@ -50,7 +51,7 @@ class TypeMapperTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_datetime_types_to_string(): void
     {
         foreach (['date', 'datetime', 'timestamp', 'timestamptz', 'time', 'year'] as $type) {
@@ -58,20 +59,20 @@ class TypeMapperTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_json_types_to_record(): void
     {
         $this->assertSame('Record<string, unknown>', TypeMapper::fromDatabaseType('json'));
         $this->assertSame('Record<string, unknown>', TypeMapper::fromDatabaseType('jsonb'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_unknown_types_to_unknown(): void
     {
         $this->assertSame('unknown', TypeMapper::fromDatabaseType('some_custom_type'));
     }
 
-    /** @test */
+    #[Test]
     public function it_strips_length_specifiers(): void
     {
         $this->assertSame('string', TypeMapper::fromDatabaseType('varchar(255)'));
@@ -79,7 +80,7 @@ class TypeMapperTest extends TestCase
         $this->assertSame('number', TypeMapper::fromDatabaseType('int(11)'));
     }
 
-    /** @test */
+    #[Test]
     public function it_is_case_insensitive(): void
     {
         $this->assertSame('number', TypeMapper::fromDatabaseType('INT'));
@@ -91,7 +92,7 @@ class TypeMapperTest extends TestCase
     //  fromLaravelCast
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_maps_integer_casts_to_number(): void
     {
         $this->assertSame('number', TypeMapper::fromLaravelCast('int'));
@@ -102,7 +103,7 @@ class TypeMapperTest extends TestCase
         $this->assertSame('number', TypeMapper::fromLaravelCast('decimal:2'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_string_casts_to_string(): void
     {
         $this->assertSame('string', TypeMapper::fromLaravelCast('string'));
@@ -110,14 +111,14 @@ class TypeMapperTest extends TestCase
         $this->assertSame('string', TypeMapper::fromLaravelCast('hashed'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_boolean_cast_to_boolean(): void
     {
         $this->assertSame('boolean', TypeMapper::fromLaravelCast('bool'));
         $this->assertSame('boolean', TypeMapper::fromLaravelCast('boolean'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_array_and_json_casts_to_array(): void
     {
         $this->assertSame('unknown[]', TypeMapper::fromLaravelCast('array'));
@@ -125,13 +126,13 @@ class TypeMapperTest extends TestCase
         $this->assertSame('unknown[]', TypeMapper::fromLaravelCast('collection'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_object_cast_to_record(): void
     {
         $this->assertSame('Record<string, unknown>', TypeMapper::fromLaravelCast('object'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_datetime_casts_to_string(): void
     {
         $this->assertSame('string', TypeMapper::fromLaravelCast('date'));
@@ -142,19 +143,19 @@ class TypeMapperTest extends TestCase
         $this->assertSame('string', TypeMapper::fromLaravelCast('timestamp'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_well_known_cast_classes(): void
     {
         $this->assertSame('Record<string, unknown>', TypeMapper::fromLaravelCast('Illuminate\\Database\\Eloquent\\Casts\\AsArrayObject'));
         $this->assertSame('unknown[]', TypeMapper::fromLaravelCast('Illuminate\\Database\\Eloquent\\Casts\\AsCollection'));
-        $this->assertSame('string', TypeMapper::fromLaravelCast('Illuminate\\Support\\Stringable'));
+        $this->assertSame('string', TypeMapper::fromLaravelCast('Illuminate\\Database\\Eloquent\\Casts\\AsStringable'));
     }
 
     // -----------------------------------------------------------------------
     //  fromRelationship
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_maps_single_relations_to_nullable_type(): void
     {
         $this->assertSame('User | null', TypeMapper::fromRelationship('HasOne', 'User'));
@@ -163,7 +164,7 @@ class TypeMapperTest extends TestCase
         $this->assertSame('User | null', TypeMapper::fromRelationship('HasOneThrough', 'User'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_collection_relations_to_arrays(): void
     {
         $this->assertSame('Post[]', TypeMapper::fromRelationship('HasMany', 'Post'));
@@ -173,13 +174,13 @@ class TypeMapperTest extends TestCase
         $this->assertSame('Tag[]', TypeMapper::fromRelationship('MorphToMany', 'Tag'));
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_morph_to_to_unknown(): void
     {
         $this->assertSame('unknown', TypeMapper::fromRelationship('MorphTo', 'Model'));
     }
 
-    /** @test */
+    #[Test]
     public function it_falls_back_to_unknown_for_unrecognised_relationship(): void
     {
         $this->assertSame('unknown', TypeMapper::fromRelationship('HasOneOrMany', 'Post'));

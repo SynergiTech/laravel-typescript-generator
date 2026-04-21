@@ -14,36 +14,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Laravel 10 — PHP 8.1
-          - php: '8.1'
-            laravel: '10.*'
-            testbench: '8.*'
-          # Laravel 10 — PHP 8.2
-          - php: '8.2'
-            laravel: '10.*'
-            testbench: '8.*'
-          # Laravel 10 — PHP 8.3
-          - php: '8.3'
-            laravel: '10.*'
-            testbench: '8.*'
-          # Laravel 11 — PHP 8.2
-          - php: '8.2'
-            laravel: '11.*'
-            testbench: '9.*'
-          # Laravel 11 — PHP 8.3
-          - php: '8.3'
-            laravel: '11.*'
-            testbench: '9.*'
-          # Laravel 12 — PHP 8.2
-          - php: '8.2'
-            laravel: '12.*'
-            testbench: '10.*'
-          # Laravel 12 — PHP 8.3 (coverage run)
-          - php: '8.3'
-            laravel: '12.*'
-            testbench: '10.*'
-            coverage: true
+        php: ['8.1', '8.2', '8.3', '8.4']
+        laravel: [10, 11, 12, 13]
+        exclude:
+          - laravel: 11
+            php: '8.1'
+          - laravel: 12
+            php: '8.1'
+          - laravel: 13
+            php: '8.1'
 
     steps:
       - name: Checkout
@@ -54,7 +33,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: pdo, pdo_sqlite, sqlite3
-          coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
+          coverage: ${{ matrix.php == '8.4' && matrix.laravel == 13 && 'pcov' || 'none' }}
 
       - name: Cache Composer packages
         uses: actions/cache@v4
@@ -66,18 +45,24 @@ jobs:
 
       - name: Pin Laravel and Testbench versions
         run: |
+          case "${{ matrix.laravel }}" in
+            10) TESTBENCH="8.*" ;;
+            11) TESTBENCH="9.*" ;;
+            12) TESTBENCH="10.*" ;;
+            13) TESTBENCH="11.*" ;;
+          esac
           composer require \
-            "laravel/framework:${{ matrix.laravel }}" \
-            "orchestra/testbench:${{ matrix.testbench }}" \
+            "laravel/framework:${{ matrix.laravel }}.*" \
+            "orchestra/testbench:${TESTBENCH}" \
             --no-interaction --no-update
 
       - name: Install dependencies
         run: composer update --prefer-dist --prefer-stable --no-interaction
 
       - name: Run tests (with coverage)
-        if: matrix.coverage
+        if: matrix.php == '8.4' && matrix.laravel == 13
         run: vendor/bin/phpunit --coverage-text
 
       - name: Run tests
-        if: ${{ !matrix.coverage }}
+        if: ${{ !(matrix.php == '8.4' && matrix.laravel == 13) }}
         run: vendor/bin/phpunit

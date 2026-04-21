@@ -2,6 +2,7 @@
 
 namespace SynergiTech\TypeScriptGenerator\Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use SynergiTech\TypeScriptGenerator\Services\TypeScriptGenerator;
 use SynergiTech\TypeScriptGenerator\Tests\Fixtures\Models\Post;
 use SynergiTech\TypeScriptGenerator\Tests\Fixtures\Models\User;
@@ -21,7 +22,7 @@ class ModelGenerationTest extends TestCase
     //  Discovery
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_discovers_eloquent_models(): void
     {
         $models = $this->generator->discoverModels();
@@ -30,7 +31,7 @@ class ModelGenerationTest extends TestCase
         $this->assertContains(User::class, $models);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_models_sorted_alphabetically(): void
     {
         $models = $this->generator->discoverModels();
@@ -41,7 +42,7 @@ class ModelGenerationTest extends TestCase
         $this->assertSame($sorted, $models);
     }
 
-    /** @test */
+    #[Test]
     public function it_skips_excluded_models(): void
     {
         config(['typescript-generator.excluded_models' => [User::class]]);
@@ -57,7 +58,7 @@ class ModelGenerationTest extends TestCase
     //  Type generation — basic DB columns
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_generates_an_interface_for_a_model(): void
     {
         $output = $this->generator->generateForModel(Post::class);
@@ -65,7 +66,7 @@ class ModelGenerationTest extends TestCase
         $this->assertStringContainsString('export interface Post {', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_bigint_id_to_number(): void
     {
         $output = $this->generator->generateForModel(Post::class);
@@ -73,7 +74,7 @@ class ModelGenerationTest extends TestCase
         $this->assertStringContainsString('id: number;', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_varchar_to_string(): void
     {
         $output = $this->generator->generateForModel(Post::class);
@@ -81,7 +82,7 @@ class ModelGenerationTest extends TestCase
         $this->assertStringContainsString('title: string;', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_marks_nullable_columns_with_null_union(): void
     {
         $output = $this->generator->generateForModel(Post::class);
@@ -93,16 +94,15 @@ class ModelGenerationTest extends TestCase
     //  Type generation — casts
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_uses_cast_type_over_database_type(): void
     {
         $output = $this->generator->generateForModel(User::class);
 
-        // boolean cast overrides the raw tinyint/bool column type
         $this->assertStringContainsString('is_admin: boolean;', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_array_cast_to_unknown_array(): void
     {
         $output = $this->generator->generateForModel(User::class);
@@ -114,7 +114,7 @@ class ModelGenerationTest extends TestCase
     //  Type generation — nullable style
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_renders_optional_style_when_configured(): void
     {
         config(['typescript-generator.nullable_style' => 'optional']);
@@ -130,7 +130,7 @@ class ModelGenerationTest extends TestCase
     //  Type overrides
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_applies_manual_type_overrides(): void
     {
         config(['typescript-generator.type_overrides' => [
@@ -147,7 +147,7 @@ class ModelGenerationTest extends TestCase
     //  Relationships
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_excludes_relationships_by_default(): void
     {
         $output = $this->generator->generateForModel(User::class, withRelationships: false);
@@ -155,7 +155,7 @@ class ModelGenerationTest extends TestCase
         $this->assertStringNotContainsString('posts?', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_relationships_when_requested(): void
     {
         $output = $this->generator->generateForModel(User::class, withRelationships: true);
@@ -168,10 +168,10 @@ class ModelGenerationTest extends TestCase
     //  Full pipeline — files written
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_writes_d_ts_files_to_the_output_directory(): void
     {
-        $results = $this->generator->generate();
+        $this->generator->generate();
 
         $outputDir = config('typescript-generator.output_directory');
 
@@ -180,7 +180,7 @@ class ModelGenerationTest extends TestCase
         $this->assertFileExists($outputDir . '/index.d.ts');
     }
 
-    /** @test */
+    #[Test]
     public function it_writes_a_barrel_index_that_re_exports_all_models(): void
     {
         $this->generator->generate();
@@ -191,7 +191,7 @@ class ModelGenerationTest extends TestCase
         $this->assertStringContainsString("export type { Post } from './Post';", $index);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_generated_model_fqcns_in_results(): void
     {
         $results = $this->generator->generate();

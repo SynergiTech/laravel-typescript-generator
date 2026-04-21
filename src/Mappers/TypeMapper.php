@@ -71,13 +71,14 @@ class TypeMapper
      */
     public static function fromLaravelCast(string $cast): string
     {
-        $cast = strtolower(trim($cast));
+        $trimmed = trim($cast);
 
-        // Handle class-based casts like AsArrayObject::class or AsCollection::class
-        // These arrive as the fully qualified class name
-        if (str_contains($cast, '\\')) {
-            return self::fromCastClassName($cast);
+        // Class-based casts must be checked before lowercasing to preserve case
+        if (str_contains($trimmed, '\\')) {
+            return self::fromCastClassName($trimmed);
         }
+
+        $cast = strtolower($trimmed);
 
         return match ($cast) {
             'int', 'integer' => 'number',

@@ -6,11 +6,12 @@ Generate TypeScript type definitions from your Laravel Eloquent models automatic
 
 ## Version Support
 
-| Laravel | PHP     | Supported |
-|---------|---------|-----------|
-| 12.x    | ^8.2    | ✓         |
-| 11.x    | ^8.2    | ✓         |
-| 10.x    | ^8.1    | ✓         |
+| Laravel | PHP          | Supported |
+|---------|--------------|-----------|
+| 13.x    | ^8.2         | ✓         |
+| 12.x    | ^8.2         | ✓         |
+| 11.x    | ^8.2         | ✓         |
+| 10.x    | ^8.1         | ✓         |
 
 ## Features
 

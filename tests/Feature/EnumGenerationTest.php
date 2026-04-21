@@ -2,6 +2,7 @@
 
 namespace SynergiTech\TypeScriptGenerator\Tests\Feature;
 
+use PHPUnit\Framework\Attributes\Test;
 use SynergiTech\TypeScriptGenerator\Services\TypeScriptGenerator;
 use SynergiTech\TypeScriptGenerator\Tests\Fixtures\Enums\Status;
 use SynergiTech\TypeScriptGenerator\Tests\TestCase;
@@ -20,7 +21,7 @@ class EnumGenerationTest extends TestCase
     //  Discovery
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_discovers_backed_enums(): void
     {
         $enums = $this->generator->discoverEnums();
@@ -32,7 +33,7 @@ class EnumGenerationTest extends TestCase
     //  Content
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_generates_a_typescript_enum_block(): void
     {
         $output = $this->generator->generateForEnum(Status::class);
@@ -40,7 +41,7 @@ class EnumGenerationTest extends TestCase
         $this->assertStringContainsString('export enum Status {', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_all_cases_with_string_values(): void
     {
         $output = $this->generator->generateForEnum(Status::class);
@@ -49,7 +50,7 @@ class EnumGenerationTest extends TestCase
         $this->assertStringContainsString("Inactive = 'inactive',", $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_the_enum_fqcn_in_the_header_comment(): void
     {
         $output = $this->generator->generateForEnum(Status::class);
@@ -61,7 +62,7 @@ class EnumGenerationTest extends TestCase
     //  Full pipeline
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function it_writes_enum_ts_files_to_the_output_directory(): void
     {
         $this->generator->generateEnums();
@@ -72,7 +73,7 @@ class EnumGenerationTest extends TestCase
         $this->assertFileExists($outputDir . '/index.ts');
     }
 
-    /** @test */
+    #[Test]
     public function it_writes_a_barrel_index_that_exports_all_enums(): void
     {
         $this->generator->generateEnums();
@@ -82,7 +83,7 @@ class EnumGenerationTest extends TestCase
         $this->assertStringContainsString("export { Status } from './Status';", $index);
     }
 
-    /** @test */
+    #[Test]
     public function it_resolves_enum_casts_to_their_typescript_name(): void
     {
         // generate() runs enums first, populating the enumMap used during model generation
