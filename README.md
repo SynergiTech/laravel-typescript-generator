@@ -21,37 +21,18 @@ Generate TypeScript type definitions from your Laravel Eloquent models automatic
 - **API Resource support** — optionally generate types from `JsonResource` classes (what your API actually returns)
 - **Per-model files** — generates one `.d.ts` per model plus a barrel `index.d.ts`
 - **Configurable** — nullable style (`| null` vs `?`), excluded models, manual type overrides
-- **Laravel 10, 11 & 12** compatible
 
 ---
 
 ## Installation
 
-### 1. Copy into your project
-
-Place the `laravel-typescript-generator` directory inside your project (e.g. in `packages/`), then add it to your root `composer.json`:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "path",
-            "url": "packages/laravel-typescript-generator"
-        }
-    ],
-    "require": {
-        "synergitech/laravel-typescript-generator": "*"
-    }
-}
-```
-
-Then run:
-
 ```bash
-composer update synergitech/laravel-typescript-generator
+composer require synergitech/laravel-typescript-generator
 ```
 
-### 2. Publish the config (optional)
+The service provider is auto-discovered by Laravel. No manual registration needed.
+
+### Publish the config (optional)
 
 ```bash
 php artisan vendor:publish --tag=typescript-generator-config
