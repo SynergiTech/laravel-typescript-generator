@@ -4,6 +4,7 @@ namespace SynergiTech\TypeScriptGenerator;
 
 use Illuminate\Support\ServiceProvider;
 use SynergiTech\TypeScriptGenerator\Commands\GenerateTypeScriptCommand;
+use SynergiTech\TypeScriptGenerator\Services\ResourceGenerator;
 use SynergiTech\TypeScriptGenerator\Services\TypeScriptGenerator;
 
 class TypeScriptGeneratorServiceProvider extends ServiceProvider
@@ -17,6 +18,10 @@ class TypeScriptGeneratorServiceProvider extends ServiceProvider
 
         $this->app->singleton(TypeScriptGenerator::class, function ($app) {
             return new TypeScriptGenerator($app['config']['typescript-generator']);
+        });
+
+        $this->app->singleton(ResourceGenerator::class, function ($app) {
+            return new ResourceGenerator($app['config']['typescript-generator']);
         });
     }
 

@@ -1,0 +1,83 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Laravel 10 — PHP 8.1
+          - php: '8.1'
+            laravel: '10.*'
+            testbench: '8.*'
+          # Laravel 10 — PHP 8.2
+          - php: '8.2'
+            laravel: '10.*'
+            testbench: '8.*'
+          # Laravel 10 — PHP 8.3
+          - php: '8.3'
+            laravel: '10.*'
+            testbench: '8.*'
+          # Laravel 11 — PHP 8.2
+          - php: '8.2'
+            laravel: '11.*'
+            testbench: '9.*'
+          # Laravel 11 — PHP 8.3
+          - php: '8.3'
+            laravel: '11.*'
+            testbench: '9.*'
+          # Laravel 12 — PHP 8.2
+          - php: '8.2'
+            laravel: '12.*'
+            testbench: '10.*'
+          # Laravel 12 — PHP 8.3 (coverage run)
+          - php: '8.3'
+            laravel: '12.*'
+            testbench: '10.*'
+            coverage: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo, pdo_sqlite, sqlite3
+          coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: php-${{ matrix.php }}-laravel-${{ matrix.laravel }}-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            php-${{ matrix.php }}-laravel-${{ matrix.laravel }}-
+
+      - name: Pin Laravel and Testbench versions
+        run: |
+          composer require \
+            "laravel/framework:${{ matrix.laravel }}" \
+            "orchestra/testbench:${{ matrix.testbench }}" \
+            --no-interaction --no-update
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --prefer-stable --no-interaction
+
+      - name: Run tests (with coverage)
+        if: matrix.coverage
+        run: vendor/bin/phpunit --coverage-text
+
+      - name: Run tests
+        if: ${{ !matrix.coverage }}
+        run: vendor/bin/phpunit

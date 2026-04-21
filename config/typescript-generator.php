@@ -69,6 +69,62 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Resource Namespace
+    |--------------------------------------------------------------------------
+    |
+    | The namespace where your API resources live (classes extending JsonResource).
+    |
+    */
+    'resource_namespace' => 'App\\Http\\Resources',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Resource Directory
+    |--------------------------------------------------------------------------
+    |
+    | The directory path (relative to base_path()) that corresponds to the
+    | resource namespace above.
+    |
+    */
+    'resource_directory' => 'app/Http/Resources',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Resource Output Directory
+    |--------------------------------------------------------------------------
+    |
+    | Where the generated resource .d.ts files will be written, relative to
+    | base_path(). Each resource gets its own file plus a barrel index.d.ts.
+    |
+    */
+    'resource_output_directory' => 'resources/js/types/resources',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Excluded Resources
+    |--------------------------------------------------------------------------
+    |
+    | Fully qualified class names of API resources that should be skipped
+    | during generation. Useful for abstract base resources.
+    |
+    */
+    'excluded_resources' => [
+        // 'App\\Http\\Resources\\BaseResource',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Include Resources
+    |--------------------------------------------------------------------------
+    |
+    | Whether to generate TypeScript types for API resources by default.
+    | Overridden at runtime with --with-resources or --without-resources.
+    |
+    */
+    'include_resources' => false,
+
+    /*
+    |--------------------------------------------------------------------------
     | Include Relationships
     |--------------------------------------------------------------------------
     |
