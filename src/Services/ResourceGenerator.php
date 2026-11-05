@@ -60,7 +60,7 @@ class ResourceGenerator
             try {
                 $definition = $this->generateForResource($resourceClass);
                 $filename = class_basename($resourceClass) . '.d.ts';
-                $this->files->put($outputDir . '/' . $filename, $definition);
+                GeneratedFileWriter::putIfChanged($this->files, $outputDir . '/' . $filename, $definition);
                 $results['generated'][] = $resourceClass;
             } catch (Throwable $e) {
                 $results['errors'][$resourceClass] = $e->getMessage();
@@ -416,7 +416,7 @@ class ResourceGenerator
 
         $lines[] = '';
 
-        $this->files->put($outputDir . '/index.d.ts', implode("\n", $lines));
+        GeneratedFileWriter::putIfChanged($this->files, $outputDir . '/index.d.ts', implode("\n", $lines));
     }
 
     // -----------------------------------------------------------------------

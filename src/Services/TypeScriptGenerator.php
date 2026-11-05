@@ -75,7 +75,7 @@ class TypeScriptGenerator
             try {
                 $typeDefinition = $this->generateForModel($modelClass, $withRelationships);
                 $filename = class_basename($modelClass) . '.d.ts';
-                $this->files->put($outputDir . '/' . $filename, $typeDefinition);
+                GeneratedFileWriter::putIfChanged($this->files, $outputDir . '/' . $filename, $typeDefinition);
                 $results['generated'][] = $modelClass;
             } catch (Throwable $e) {
                 $results['errors'][$modelClass] = $e->getMessage();
@@ -205,7 +205,7 @@ class TypeScriptGenerator
             try {
                 $definition = $this->generateForEnum($enumClass);
                 $filename = class_basename($enumClass) . '.ts';
-                $this->files->put($outputDir . '/' . $filename, $definition);
+                GeneratedFileWriter::putIfChanged($this->files, $outputDir . '/' . $filename, $definition);
                 $this->enumMap[$enumClass] = class_basename($enumClass);
                 $results['generated'][] = $enumClass;
             } catch (Throwable $e) {
@@ -530,7 +530,7 @@ class TypeScriptGenerator
 
         $lines[] = '';
 
-        $this->files->put($outputDir . '/index.d.ts', implode("\n", $lines));
+        GeneratedFileWriter::putIfChanged($this->files, $outputDir . '/index.d.ts', implode("\n", $lines));
     }
 
     /**
@@ -549,7 +549,7 @@ class TypeScriptGenerator
 
         $lines[] = '';
 
-        $this->files->put($outputDir . '/index.ts', implode("\n", $lines));
+        GeneratedFileWriter::putIfChanged($this->files, $outputDir . '/index.ts', implode("\n", $lines));
     }
 
     // -----------------------------------------------------------------------
